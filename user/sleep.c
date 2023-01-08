@@ -14,7 +14,6 @@ int main(int argc, char *argv[]){
     // write(1,"sleep",5);
 
     int time=atoi(argv[1])*10;
-
     sleep(time);
 
     //fprintf(1,"fail");
