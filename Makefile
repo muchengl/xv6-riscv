@@ -108,6 +108,7 @@ $U/_forktest: $U/forktest.o $(ULIB)
 
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
+	#gcc -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
@@ -133,6 +134,7 @@ UPROGS=\
 	$U/_wc\
 	$U/_zombie\
 	$U/_sleep\
+	$U/_pingpong\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
@@ -174,8 +176,8 @@ qemu-gdb: $K/kernel .gdbinit fs.img
 
 
 
-## grade section
-## ====================================
+# grade section
+# ====================================
 print-gdbport:
 	@echo $(GDBPORT)
 
