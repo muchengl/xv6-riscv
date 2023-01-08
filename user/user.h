@@ -23,6 +23,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int pingpong(void);
+//int find(const char*,const char*);
 
 
 // ulib.c
