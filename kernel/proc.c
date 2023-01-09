@@ -302,6 +302,7 @@ fork(void)
   // Cause fork to return 0 in the child.
   np->trapframe->a0 = 0;
 
+
   // increment reference counts on open file descriptors.
   for(i = 0; i < NOFILE; i++)
     if(p->ofile[i])
@@ -311,6 +312,9 @@ fork(void)
   safestrcpy(np->name, p->name, sizeof(p->name));
 
   pid = np->pid;
+
+  //复制追踪状态
+  np->traced = p->traced;
 
   release(&np->lock);
 
@@ -680,4 +684,15 @@ procdump(void)
     printf("%d %s %s", p->pid, state, p->name);
     printf("\n");
   }
+}
+
+int
+trace(int id){
+
+    struct proc *p = myproc();
+
+    // 进行追踪标记
+    p->traced=id;
+
+    return 0;
 }

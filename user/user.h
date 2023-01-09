@@ -22,7 +22,8 @@ int getpid(void);
 char* sbrk(int);
 int sleep(int);
 int uptime(void);
-int pingpong(void);
+//int pingpong(void);
+int trace(int);
 //int find(const char*,const char*);
 
 

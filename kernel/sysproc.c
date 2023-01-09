@@ -89,3 +89,13 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+uint64
+sys_trace(void){
+    int muskid;
+
+    // 获取system call 参数
+    argint(0,&muskid);
+
+    return trace(muskid);
+}
