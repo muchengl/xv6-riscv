@@ -108,6 +108,12 @@ int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int             trace(int);
 
+struct sysinfo;
+int sysinfo(uint64 user_p);
+
+uint64 get_free_proc();
+uint64 get_free_memory();
+
 // swtch.S
 void            swtch(struct context*, struct context*);
 

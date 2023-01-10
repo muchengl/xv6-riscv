@@ -5,6 +5,7 @@
 #include "spinlock.h"
 #include "proc.h"
 #include "defs.h"
+#include "sysinfo.h"
 
 struct cpu cpus[NCPU];
 
@@ -696,3 +697,37 @@ trace(int id){
 
     return 0;
 }
+
+uint64 get_free_proc(){
+    uint64 con=0;
+
+    struct proc *p;
+    for(p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if(p->state != UNUSED) {
+            //printf("===");
+
+            con++;
+        }
+        release(&p->lock);
+    }
+    return con;
+
+}
+
+
+//int
+//sysinfo(uint64 user_p){
+//
+//    // 获取系统信息
+////    struct sysinfo info;
+////    struct sysinfo *inf=&info;
+////    inf->freemem=0;
+////    inf->nproc=0;
+////
+////    // 写回用户空间
+////    struct proc *p = myproc();
+////    copyout(p->pagetable, user_p, (char *)&inf, sizeof(info));
+//
+//    return 0;
+//}

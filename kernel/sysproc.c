@@ -5,6 +5,7 @@
 #include "memlayout.h"
 #include "spinlock.h"
 #include "proc.h"
+#include "sysinfo.h"
 
 uint64
 sys_exit(void)
@@ -98,4 +99,22 @@ sys_trace(void){
     argint(0,&muskid);
 
     return trace(muskid);
+}
+
+uint64
+sys_sysinfo(void){
+    // 获取用户传来的地址
+    uint64 user_p;
+    argaddr(0,&user_p);
+
+    struct sysinfo info;
+    info.freemem=get_free_memory();
+    info.nproc=get_free_proc();
+
+    //printf("%d %d\n",info->freemem,info->nproc);
+
+    // 写回用户空间
+    struct proc *p = myproc();
+    if(copyout(p->pagetable, user_p, (char *)&info, sizeof(info))<0) return -1;
+    return 0;
 }

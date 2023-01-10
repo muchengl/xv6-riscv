@@ -1,4 +1,5 @@
 struct stat;
+struct sysinfo;
 
 // system calls
 int fork(void);
@@ -24,6 +25,7 @@ int sleep(int);
 int uptime(void);
 //int pingpong(void);
 int trace(int);
+int sysinfo(struct sysinfo *);
 //int find(const char*,const char*);
 
 
