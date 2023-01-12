@@ -16,11 +16,14 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 extern char trampoline[]; // trampoline.S
 
 // Make a direct-map page table for the kernel.
+// 内核页表，直接映射到物理内存
 pagetable_t
 kvmmake(void)
 {
+
   pagetable_t kpgtbl;
 
+    // 分配一页内存，内核页表起始地址
   kpgtbl = (pagetable_t) kalloc();
   memset(kpgtbl, 0, PGSIZE);
 
@@ -82,6 +85,7 @@ kvminithart()
 //   21..29 -- 9 bits of level-1 index.
 //   12..20 -- 9 bits of level-0 index.
 //    0..11 -- 12 bits of byte offset within the page.
+// 返回pte的物理地址，根据虚拟地址va
 pte_t *
 walk(pagetable_t pagetable, uint64 va, int alloc)
 {
@@ -90,12 +94,12 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
 
   for(int level = 2; level > 0; level--) {
     pte_t *pte = &pagetable[PX(level, va)];
-    if(*pte & PTE_V) {
-      pagetable = (pagetable_t)PTE2PA(*pte);
-    } else {
-      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0)
+    if(*pte & PTE_V) { //已经分配
+      pagetable = (pagetable_t)PTE2PA(*pte); //跳转到下一级页表
+    } else { // 为分配此级页表
+      if(!alloc || (pagetable = (pde_t*)kalloc()) == 0) //分配一页，并跳转到下一级页表
         return 0;
-      memset(pagetable, 0, PGSIZE);
+      memset(pagetable, 0, PGSIZE); //初始化页
       *pte = PA2PTE(pagetable) | PTE_V;
     }
   }
@@ -128,6 +132,10 @@ walkaddr(pagetable_t pagetable, uint64 va)
 // add a mapping to the kernel page table.
 // only used when booting.
 // does not flush TLB or enable paging.
+// 建立内核页表映射，va->pa，给va分配pte，pte的地址是pa
+// 范围是 va->va + size
+// va虚拟地址
+// pa物理地址
 void
 kvmmap(pagetable_t kpgtbl, uint64 va, uint64 pa, uint64 sz, int perm)
 {
@@ -149,13 +157,13 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
     panic("mappages: size");
   
   a = PGROUNDDOWN(va);
-  last = PGROUNDDOWN(va + size - 1);
+  last = PGROUNDDOWN(va + size - 1); // 结束的地址
   for(;;){
-    if((pte = walk(pagetable, a, 1)) == 0)
+    if((pte = walk(pagetable, a, 1)) == 0) //对对应的物理地址进行分配
       return -1;
     if(*pte & PTE_V)
       panic("mappages: remap");
-    *pte = PA2PTE(pa) | perm | PTE_V;
+    *pte = PA2PTE(pa) | perm | PTE_V; // 初始化pte
     if(a == last)
       break;
     a += PGSIZE;
@@ -193,6 +201,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
 // create an empty user page table.
 // returns 0 if out of memory.
+// 创建一个空的新page，作为用户页表
 pagetable_t
 uvmcreate()
 {
@@ -274,6 +283,8 @@ freewalk(pagetable_t pagetable)
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
+//    if(pte!=0)
+//        printf("%d\n",pte);
     if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
       // this PTE points to a lower-level page table.
       uint64 child = PTE2PA(pte);

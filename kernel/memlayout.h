@@ -59,6 +59,9 @@
 // each surrounded by invalid guard pages.
 #define KSTACK(p) (TRAMPOLINE - (p)*2*PGSIZE - 3*PGSIZE)
 
+
+//#define USYSCALL (MAXVA - PGSIZE*2)
+
 // User memory layout.
 // Address zero first:
 //   text

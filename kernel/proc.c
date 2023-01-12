@@ -20,6 +20,8 @@ static void freeproc(struct proc *p);
 
 extern char trampoline[]; // trampoline.S
 
+//struct proc *USYSCALL_region;
+
 // helps ensure that wakeups of wait()ing
 // parents are not lost. helps obey the
 // memory model when using p->parent.
@@ -125,6 +127,16 @@ found:
   p->pid = allocpid();
   p->state = USED;
 
+  // 分配一页进行syscall read only page存储
+  if((p->SYSCALL = (struct usyscall *)kalloc())==0){
+      freeproc(p);
+      release(&p->lock);
+      return 0;
+  }
+  p->SYSCALL->pid=p->pid;
+
+
+
   // Allocate a trapframe page.
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
@@ -133,7 +145,9 @@ found:
   }
 
   // An empty user page table.
+    //printf("Fail1\n");
   p->pagetable = proc_pagetable(p);
+    //printf("Fail3\n");
   if(p->pagetable == 0){
     freeproc(p);
     release(&p->lock);
@@ -157,6 +171,13 @@ freeproc(struct proc *p)
 {
   if(p->trapframe)
     kfree((void*)p->trapframe);
+
+  // 释放USYSCALL
+//  kfree((void*)p->SYSCALL);
+  if (p->SYSCALL)
+      kfree((void *)p->SYSCALL);
+  p->SYSCALL = 0;
+
   p->trapframe = 0;
   if(p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -173,15 +194,28 @@ freeproc(struct proc *p)
 
 // Create a user page table for a given process, with no user memory,
 // but with trampoline and trapframe pages.
+// 分配一个user page table
 pagetable_t
 proc_pagetable(struct proc *p)
 {
+  //
   pagetable_t pagetable;
 
   // An empty page table.
+  // 分配一个新的空闲page
   pagetable = uvmcreate();
   if(pagetable == 0)
     return 0;
+
+
+  // read-only region between userspace and the kernel
+  // 优化sys call
+    if (mappages(pagetable, USYSCALL, PGSIZE, (uint64)(p->SYSCALL), PTE_R|PTE_U))
+    {
+        uvmfree(pagetable, 0);
+        return 0;
+    }
+
 
   // map the trampoline code (for system call return)
   // at the highest user virtual address.
@@ -193,6 +227,7 @@ proc_pagetable(struct proc *p)
     return 0;
   }
 
+
   // map the trapframe page just below the trampoline page, for
   // trampoline.S.
   if(mappages(pagetable, TRAPFRAME, PGSIZE,
@@ -202,6 +237,7 @@ proc_pagetable(struct proc *p)
     return 0;
   }
 
+    //printf("Fail2\n");
   return pagetable;
 }
 
@@ -210,9 +246,15 @@ proc_pagetable(struct proc *p)
 void
 proc_freepagetable(pagetable_t pagetable, uint64 sz)
 {
+
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
+
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
+
+  uvmunmap(pagetable, USYSCALL, 1, 0);
+
   uvmfree(pagetable, sz);
+    //printf("File exec2\n");
 }
 
 // a user program that calls exec("/init")
