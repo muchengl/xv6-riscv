@@ -19,6 +19,9 @@ int flags2perm(int flags)
     return perm;
 }
 
+
+
+
 int
 exec(char *path, char **argv)
 {
@@ -131,6 +134,8 @@ exec(char *path, char **argv)
 
   proc_freepagetable(oldpagetable, oldsz);
 
+  printf("page table %p\n",pagetable);
+  vmprint(pagetable,1);
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:
@@ -140,6 +145,8 @@ exec(char *path, char **argv)
     iunlockput(ip);
     end_op();
   }
+
+
   return -1;
 }
 
@@ -167,3 +174,5 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz
   
   return 0;
 }
+
+
