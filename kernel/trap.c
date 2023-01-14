@@ -36,6 +36,12 @@ trapinithart(void)
 void
 usertrap(void)
 {
+
+    //
+
+//    struct proc *myproc = myproc();
+
+
   int which_dev = 0;
 
   if((r_sstatus() & SSTATUS_SPP) != 0)
@@ -46,6 +52,9 @@ usertrap(void)
   w_stvec((uint64)kernelvec);
 
   struct proc *p = myproc();
+//    printf("Passed!\n");
+
+
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
@@ -73,12 +82,41 @@ usertrap(void)
     setkilled(p);
   }
 
-  if(killed(p))
-    exit(-1);
 
-  // give up the CPU if this is a timer interrupt.
-  if(which_dev == 2)
-    yield();
+
+
+  if(killed(p)){
+      exit(-1);
+  }
+
+
+    if(which_dev == 2) {
+        if(p->ticks!=0){
+            p->con++;
+            if(p->ticks==p->con){
+                //p->con=0;
+
+                // 保存alarm之前的状态
+
+                *p->trapframe_alarm=*p->trapframe;
+
+                // 返回返回函数点
+                // w_sepc(p->trapframe->epc);
+                p->trapframe->epc=p->handler;
+
+
+            }
+        }
+
+
+        // give up the CPU if this is a timer interrupt.
+        yield();
+
+    }
+
+
+
+
 
   usertrapret();
 }
