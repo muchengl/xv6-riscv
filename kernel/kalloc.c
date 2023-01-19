@@ -14,6 +14,7 @@ void freerange(void *pa_start, void *pa_end);
 extern char end[]; // first address after kernel.
                    // defined by kernel.ld.
 
+
 struct run {
   struct run *next;
 };
@@ -23,11 +24,26 @@ struct {
   struct run *freelist;
 } kmem;
 
+int con[32723];     //引用技术
+
+//int page_num; //页数
+//int *con;     //引用技术
+
+int
+getrefindex(void *pa){
+    int index = ((char*)pa - (char*)PGROUNDUP((uint64)end)) / PGSIZE;
+    return index;
+}
+
+
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
   freerange(end, (void*)PHYSTOP);
+
+//  int arr[page_num];
+//  con=(int*)kalloc();
 }
 
 void
@@ -35,8 +51,11 @@ freerange(void *pa_start, void *pa_end)
 {
   char *p;
   p = (char*)PGROUNDUP((uint64)pa_start);
-  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE)
-    kfree(p);
+  for(; p + PGSIZE <= (char*)pa_end; p += PGSIZE) {
+      kfree(p);
+      con[getrefindex(p)]=0;
+
+  }
 }
 
 // Free the page of physical memory pointed at by pa,
@@ -48,8 +67,16 @@ kfree(void *pa)
 {
   struct run *r;
 
-  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
-    panic("kfree");
+  if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP) {
+      panic("kfree");
+  }
+
+  con[getrefindex(pa)]--;
+  //printf("%d",con[(uint64)pa/PGSIZE]);
+  if(con[getrefindex(pa)]>0){
+
+      return;
+  }
 
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
@@ -76,7 +103,10 @@ kalloc(void)
     kmem.freelist = r->next;
   release(&kmem.lock);
 
-  if(r)
-    memset((char*)r, 5, PGSIZE); // fill with junk
+  if(r) {
+      memset((char *) r, 5, PGSIZE); // fill with junk
+      con[getrefindex((uint64*)r)]++;
+  }
+
   return (void*)r;
 }

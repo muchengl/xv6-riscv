@@ -287,6 +287,18 @@ intr_get()
   return (x & SSTATUS_SIE) != 0;
 }
 
+// SSTATUS_SPP
+// 1 supervisior
+// 0 user
+static inline uint64
+SPP_get()
+{
+    uint64 x = r_sstatus();
+//    (x & (1<<8))>0
+    return (x & SSTATUS_SPP);
+//    return r_sstatus();
+}
+
 static inline uint64
 r_sp()
 {
@@ -343,6 +355,9 @@ typedef uint64 *pagetable_t; // 512 PTEs
 #define PTE_W (1L << 2)
 #define PTE_X (1L << 3)
 #define PTE_U (1L << 4) // user can access
+
+#define COW_FLAG (1L << 8)
+//#define COW_W_FLAG (1L << 55)
 
 // shift a physical address to the right place for a PTE.
 #define PA2PTE(pa) ((((uint64)pa) >> 12) << 10)

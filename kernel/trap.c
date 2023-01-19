@@ -49,7 +49,11 @@ usertrap(void)
   
   // save user program counter.
   p->trapframe->epc = r_sepc();
-  
+
+//    uint64 scause = r_scause();
+//
+//    printf("%p\n",scause);
+
   if(r_scause() == 8){
     // system call
 
@@ -65,9 +69,54 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if((which_dev = devintr()) != 0){
+  }
+  else if(r_scause() == 15){
+//      printf("page\n");
+        struct proc *p = myproc();
+
+        /* 【xv6对页的操控粒度为Page】
+         * 需要将当前虚拟地址所对应的page进行拷贝
+         * 由于虚拟地址可能指向页的中间
+         * 因此需要向下对其到页的边界
+         * 从而将这一页全部都进行拷贝（COW）
+         */
+        uint64 va=PGROUNDDOWN(r_stval()); // 虚拟地址
+
+        pte_t *pte; // pte
+        pte = walk(p->pagetable, va, 0);
+
+        if(*pte & COW_FLAG){ //是cow页面
+            uint64 pa=PTE2PA(*pte); // 物理地址
+
+
+            char *mem;
+            //分配一页新内存
+            if((mem = kalloc()) == 0)
+                panic("uvmtrap: pte alloc exist");
+
+            // 拷贝旧数据的值到新page
+            memmove(mem, (char*)pa, PGSIZE);
+
+            int flags = PTE_FLAGS(*pte);
+
+            flags =flags | PTE_W;
+            flags &= ~COW_FLAG;
+//            *pte &=~PTE_V;
+            // 进行内存映射
+            mappages(p->pagetable, va, PGSIZE, (uint64)mem, flags);
+
+
+            kfree((void*)pa);
+
+        }
+
+
+    }
+  else if((which_dev = devintr()) != 0){
     // ok
-  } else {
+//    printf("===\n");
+  }
+  else {
     printf("usertrap(): unexpected scause %p pid=%d\n", r_scause(), p->pid);
     printf("            sepc=%p stval=%p\n", r_sepc(), r_stval());
     setkilled(p);
@@ -154,6 +203,9 @@ kerneltrap()
   if(which_dev == 2 && myproc() != 0 && myproc()->state == RUNNING)
     yield();
 
+  // 页中断
+
+
   // the yield() may have caused some traps to occur,
   // so restore trap registers for use by kernelvec.S's sepc instruction.
   w_sepc(sepc);
@@ -179,8 +231,8 @@ devintr()
 {
   uint64 scause = r_scause();
 
-  if((scause & 0x8000000000000000L) &&
-     (scause & 0xff) == 9){
+//  printf("%p\n",scause);
+  if((scause & 0x8000000000000000L) && (scause & 0xff) == 9){
     // this is a supervisor external interrupt, via PLIC.
 
     // irq indicates which device interrupted.
@@ -201,7 +253,8 @@ devintr()
       plic_complete(irq);
 
     return 1;
-  } else if(scause == 0x8000000000000001L){
+  }
+  else if(scause == 0x8000000000000001L){
     // software interrupt from a machine-mode timer interrupt,
     // forwarded by timervec in kernelvec.S.
 
@@ -214,8 +267,19 @@ devintr()
     w_sip(r_sip() & ~2);
 
     return 2;
-  } else {
+  }
+  else if(scause == 13 || scause == 15){
+//      printf("3\n");
+      return 3;
+  }
+  else {
     return 0;
   }
 }
 
+// 10 a
+// 11 b
+// 12 c
+// 13 d
+// 14 e
+// 15 f

@@ -289,11 +289,29 @@ fork(void)
   }
 
   // Copy user memory from parent to child.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
-    freeproc(np);
-    release(&np->lock);
-    return -1;
-  }
+//  printf("%p\n",SPP_get());
+    if(uvmcopy_u(p->pagetable, np->pagetable, p->sz) < 0){
+        freeproc(np);
+        release(&np->lock);
+        return -1;
+    }
+//  if(SPP_get()==1){
+//      printf("kernel!\n");
+//      if(uvmcopy(p->pagetable, np->pagetable, p->sz) < 0){
+//          freeproc(np);
+//          release(&np->lock);
+//          return -1;
+//      }
+//
+//  }
+//  else{
+//      printf("user!\n");
+//      if(uvmcopy_u(p->pagetable, np->pagetable, p->sz) < 0){
+//          freeproc(np);
+//          release(&np->lock);
+//          return -1;
+//      }
+//  }
   np->sz = p->sz;
 
   // copy saved user registers.
